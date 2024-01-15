@@ -5,6 +5,7 @@ using BepInEx.Configuration;
 using HarmonyLib;
 using MonsterAITweaks.Configs;
 using MonsterAITweaks.Extensions;
+using TMPro;
 using UnityEngine;
 
 namespace MonsterAITweaks {
@@ -13,6 +14,7 @@ namespace MonsterAITweaks {
     internal static class MonsterDB {
         private static readonly Dictionary<ConfigEntry<float>, GameObject> MonsterConfigMap = new();
         private static readonly HashSet<string> IgnoredMonsters = new() { "TheHive" };
+        private static readonly Dictionary<ItemDrop, float> DefaultAiAttackIntervals = new();
 
         [HarmonyPostfix]
         [HarmonyPatch(typeof(ZoneSystem), nameof(ZoneSystem.Start))]
@@ -83,7 +85,40 @@ namespace MonsterAITweaks {
             MonsterConfigMap.Add(attackInterval, monster);
             monsterAI.m_minAttackInterval = attackInterval.Value;
             attackInterval.SettingChanged += UpdateAttackInterval;
+
+
+            var weaponIntervalMultiplier = ConfigManager.BindConfig(
+                monster.name,
+                "weaponIntervalMultiplier",
+                1f,
+                "Multiplier for time before monster can use the same the attack again.",
+                new AcceptableValueRange<float>(0f, 2f)
+            );
+
+            MonsterConfigMap.Add(weaponIntervalMultiplier, monster);
+
+            var humanoid = monsterAI.m_character as Humanoid;
+            foreach (var item in humanoid.m_defaultItems) {
+                if (item.TryGetComponent(out ItemDrop itemDrop)) {
+                    DefaultAiAttackIntervals[itemDrop] = itemDrop.m_itemData.m_shared.m_aiAttackInterval;
+                    itemDrop.m_itemData.m_shared.m_aiAttackInterval = DefaultAiAttackIntervals[itemDrop] * weaponIntervalMultiplier.Value;
+                }
+            }
+
+            weaponIntervalMultiplier.SettingChanged += UpdateWpnAiAttackInterval;
         }
+
+        //private static bool IsWeapon(ItemDrop item) {
+        //    var itemType = item.m_itemData.m_shared.m_itemType;
+        //    switch (itemType) {
+        //        case ItemDrop.ItemData.ItemType.OneHandedWeapon: return true;
+        //        case ItemDrop.ItemData.ItemType.TwoHandedWeapon: return true;
+        //        case ItemDrop.ItemData.ItemType.Bow: return true;
+        //        case ItemDrop.ItemData.ItemType.Torch: return true;
+        //        case ItemDrop.ItemData.ItemType.Torch: return true;
+
+        //    }
+        //}
 
         private static bool TryGetMonsterConfig(object obj, out ConfigEntry<float> config, out GameObject monster) {
             if (obj is ConfigEntry<float> cfg &&
@@ -122,6 +157,19 @@ namespace MonsterAITweaks {
             if (TryGetMonsterConfig(obj, out ConfigEntry<float> config, out GameObject monster)) {
                 monster.GetComponent<MonsterAI>().m_minAttackInterval = config.Value;
                 Log.LogInfo($"Set {monster.name} min attack interval to {config.Value}", LogLevel.High);
+            }
+        }
+
+        private static void UpdateWpnAiAttackInterval(object obj, EventArgs args) {
+            if (TryGetMonsterConfig(obj, out ConfigEntry<float> config, out GameObject monster)) {
+                var monsterAI = monster.GetComponent<MonsterAI>();
+
+                var humanoid = monsterAI.m_character as Humanoid;
+                foreach (var item in humanoid.m_defaultItems) {
+                    if (item.TryGetComponent(out ItemDrop itemDrop)) {
+                        itemDrop.m_itemData.m_shared.m_aiAttackInterval = DefaultAiAttackIntervals[itemDrop] * config.Value;
+                    }
+                }
             }
         }
 
