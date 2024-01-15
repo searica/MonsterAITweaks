@@ -4,6 +4,7 @@ using BepInEx.Bootstrap;
 using BepInEx.Configuration;
 using MonsterAITweaks.Extensions;
 using System;
+using System.Diagnostics.Tracing;
 using System.IO;
 using System.Reflection;
 using UnityEngine;
@@ -60,24 +61,68 @@ namespace MonsterAITweaks.Configs {
             T value,
             string description,
             AcceptableValueBase acceptVals = null,
-            bool synced = true,
-            int? order = null
+            bool synced = true
         ) {
             string extendedDescription = GetExtendedDescription(description, synced);
-            return configFile.Bind(
+            ConfigEntry<T> configEntry = configFile.Bind(
                 section,
                 name,
                 value,
                 new ConfigDescription(
                     extendedDescription,
                     acceptVals,
-                    new ConfigurationManagerAttributes() {
-                        IsAdminOnly = synced,
-                        Order = order
-                    }
+                    synced ? AdminConfig : ClientConfig
                 )
             );
+            return configEntry;
         }
+
+        internal static ConfigEntry<T> BindConfig<T>(
+            string section,
+            string name,
+            T value,
+            string description,
+            AcceptableValueBase acceptVals = null,
+            params ConfigurationManagerAttributes[] tags
+        ) {
+            ConfigEntry<T> configEntry = configFile.Bind(
+                section,
+                name,
+                value,
+                new ConfigDescription(
+                    description,
+                    acceptVals,
+                    tags
+                )
+            );
+            return configEntry;
+        }
+
+        //internal static ConfigEntry<T> BindConfig<T>(
+        //    string section,
+        //    string name,
+        //    T value,
+        //    string description,
+        //    AcceptableValueBase acceptVals = null,
+        //    bool synced = true,
+        //    int? order = null
+        //) {
+        //    string extendedDescription = GetExtendedDescription(description, synced);
+        //    ConfigEntry<T> configEntry = configFile.Bind(
+        //        section,
+        //        name,
+        //        value,
+        //        new ConfigDescription(
+        //            extendedDescription,
+        //            acceptVals,
+        //            synced ? AdminConfig : ClientConfig,
+        //            new ConfigurationManagerAttributes() { Order = order }
+        //        )
+        //    );
+        //    return configEntry;
+        //}
+
+
 
         /// <summary>
         ///     Prepends Zero-Width-Space to set ordering of configuration sections

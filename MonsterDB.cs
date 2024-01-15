@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using BepInEx.Configuration;
 using HarmonyLib;
-using Jotunn.Managers;
 using MonsterAITweaks.Configs;
 using MonsterAITweaks.Extensions;
 using UnityEngine;
@@ -32,20 +31,6 @@ namespace MonsterAITweaks {
 
             ConfigManager.Save();
             ConfigManager.SaveOnConfigSet(true);
-        }
-
-        [HarmonyPostfix]
-        [HarmonyPatch(typeof(Game), nameof(Game._RequestRespawn))]
-        private static void InitGame() {
-            Log.LogInfo($"PlayerIsAdmin: {SynchronizationManager.Instance.PlayerIsAdmin}");
-
-            ConfigManager.BindConfig(
-                "AAA",
-                "AAA",
-                1f,
-                "AAA.",
-                new AcceptableValueRange<float>(0f, 1000f)
-            );
         }
 
         private static void CreateConfigs(GameObject monster) {

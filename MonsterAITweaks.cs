@@ -11,7 +11,6 @@ using UnityEngine;
 
 namespace MonsterAITweaks {
 
-    [HarmonyPatch]
     [BepInPlugin(PluginGUID, PluginName, PluginVersion)]
     [BepInDependency(Jotunn.Main.ModGuid, Jotunn.Main.Version)]
     internal sealed class MonsterAITweaks : BaseUnityPlugin {
@@ -39,14 +38,6 @@ namespace MonsterAITweaks {
             ConfigManager.SetupWatcher();
             //ConfigManager.CheckForConfigManager();
 
-            ConfigManager.BindConfig(
-                "AAAA",
-                "AAA",
-                1f,
-                "AAA.",
-                new AcceptableValueRange<float>(0f, 1000f)
-            );
-
         }
 
         public void OnDestroy() {
@@ -61,22 +52,19 @@ namespace MonsterAITweaks {
                 "Low will log basic information about the mod. Medium will log information that " +
                 "is useful for troubleshooting. High will log a lot of information, do not set " +
                 "it to this without good reason as it will slow Down your game.",
-                synced: false
+                synced: true
             );
+
+            //ConfigManager.BindConfig(
+            //    MainSection,
+            //    "ServerSyncBugFix",
+            //    true,
+            //    "Hidden value so a server sync'd config value gets bound before exiting Plugin.Awake",
+            //    acceptVals: null,
+            //    new ConfigurationManagerAttributes() { IsAdminOnly = true, Browsable = false }
+            //);
 
             ConfigManager.Save();
-        }
-
-        [HarmonyPostfix]
-        [HarmonyPatch(typeof(ZoneSystem), nameof(ZoneSystem.Start))]
-        private static void InitializeConfig() {
-            ConfigManager.BindConfig(
-                "AAAAA",
-                "ZoneSystemStart-Plugin",
-                1f,
-                "AAA.",
-                new AcceptableValueRange<float>(0f, 1000f)
-            );
         }
     }
 
