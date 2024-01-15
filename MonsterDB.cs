@@ -64,7 +64,7 @@ namespace MonsterAITweaks {
                 monster.name,
                 nameof(monsterAI.m_circleTargetInterval).RemovePrefix("m_"),
                 monsterAI.m_circleTargetInterval,
-                "Interval that monster circles target at.",
+                "Maximum time before monster pauses attacking and circles target again, will not pause if set to 0.",
                 new AcceptableValueRange<float>(0f, 1000f)
             );
             MonsterConfigMap.Add(circleInterval, monster);
