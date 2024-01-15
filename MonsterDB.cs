@@ -80,7 +80,7 @@ namespace MonsterAITweaks {
                 "Minimum time before monster can attack again.",
                 new AcceptableValueRange<float>(0f, 1000f)
             );
-            MonsterConfigMap.Add(circleInterval, monster);
+            MonsterConfigMap.Add(attackInterval, monster);
             monsterAI.m_minAttackInterval = attackInterval.Value;
             attackInterval.SettingChanged += UpdateAttackInterval;
         }
@@ -129,7 +129,8 @@ namespace MonsterAITweaks {
             var gameObjects = Resources.FindObjectsOfTypeAll<GameObject>(); // get all GameObjects
             var prefabs = gameObjects.Where(x => !x.transform.parent); // get objects without a parent (ie they are root prefabs)
             // Get prefabs that have monsterAI component and are not ignored
-            return prefabs.Where(x => x.GetComponent<MonsterAI>() && !IgnoredMonsters.Contains(x.name)).ToList();
+            var monsters = prefabs.Where(x => x.GetComponent<MonsterAI>());
+            return monsters.Where(x => !IgnoredMonsters.Contains(x.name)).ToList();
         }
     }
 }
