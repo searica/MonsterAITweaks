@@ -12,6 +12,7 @@ namespace MonsterAITweaks {
     [HarmonyPatch]
     internal static class MonsterDB {
         private static readonly Dictionary<ConfigEntry<float>, GameObject> MonsterConfigMap = new();
+        private static readonly HashSet<string> IgnoredMonsters = new() { "TheHive" };
 
         [HarmonyPostfix]
         [HarmonyPatch(typeof(ZoneSystem), nameof(ZoneSystem.Start))]
@@ -127,7 +128,8 @@ namespace MonsterAITweaks {
         private static List<GameObject> FindMonsters() {
             var gameObjects = Resources.FindObjectsOfTypeAll<GameObject>(); // get all GameObjects
             var prefabs = gameObjects.Where(x => !x.transform.parent); // get objects without a parent (ie they are root prefabs)
-            return prefabs.Where(x => x.GetComponent<MonsterAI>()).ToList(); // Get prefabs that have monsterAI component
+            // Get prefabs that have monsterAI component and are not ignored
+            return prefabs.Where(x => x.GetComponent<MonsterAI>() && !IgnoredMonsters.Contains(x.name)).ToList();
         }
     }
 }
