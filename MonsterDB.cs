@@ -70,6 +70,18 @@ namespace MonsterAITweaks {
             MonsterConfigMap.Add(circleInterval, monster);
             monsterAI.m_circleTargetInterval = circleInterval.Value;
             circleInterval.SettingChanged += UpdateCircleInterval;
+
+
+            var attackInterval = ConfigManager.BindConfig(
+                monster.name,
+                nameof(monsterAI.m_minAttackInterval).RemovePrefix("m_"),
+                monsterAI.m_minAttackInterval,
+                "Minimum time before monster can attack again.",
+                new AcceptableValueRange<float>(0f, 1000f)
+            );
+            MonsterConfigMap.Add(circleInterval, monster);
+            monsterAI.m_minAttackInterval = attackInterval.Value;
+            attackInterval.SettingChanged += UpdateAttackInterval;
         }
 
         private static bool TryGetMonsterConfig(object obj, out ConfigEntry<float> config, out GameObject monster) {
@@ -102,6 +114,13 @@ namespace MonsterAITweaks {
             if (TryGetMonsterConfig(obj, out ConfigEntry<float> config, out GameObject monster)) {
                 monster.GetComponent<MonsterAI>().m_circleTargetInterval = config.Value;
                 Log.LogInfo($"Set {monster.name} circle interval to {config.Value}", LogLevel.High);
+            }
+        }
+
+        private static void UpdateAttackInterval(object obj, EventArgs args) {
+            if (TryGetMonsterConfig(obj, out ConfigEntry<float> config, out GameObject monster)) {
+                monster.GetComponent<MonsterAI>().m_minAttackInterval = config.Value;
+                Log.LogInfo($"Set {monster.name} min attack interval to {config.Value}", LogLevel.High);
             }
         }
 
