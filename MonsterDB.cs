@@ -30,6 +30,10 @@ namespace MonsterAITweaks {
 
             foreach (var monster in monsters) {
                 CreateConfigs(monster);
+                var monsterAI = monster.GetComponent<MonsterAI>();
+                if (monsterAI.m_character && monsterAI.m_character is Humanoid humanoid) {
+                    Log.LogInfo(monsterAI.name);
+                }
             }
 
             ConfigManager.Save();
@@ -86,7 +90,7 @@ namespace MonsterAITweaks {
             attackInterval.SettingChanged += UpdateAttackInterval;
 
             // check if I should create config for weapons
-            if (monsterAI.m_character is not Humanoid humanoid) {
+            if (!monster.TryGetComponent(out Humanoid humanoid)) {
                 return;
             }
 
