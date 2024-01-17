@@ -74,7 +74,6 @@ namespace MonsterAITweaks {
             monsterAI.m_circleTargetInterval = circleInterval.Value;
             circleInterval.SettingChanged += UpdateCircleInterval;
 
-
             var attackInterval = ConfigManager.BindConfig(
                 monster.name,
                 nameof(monsterAI.m_minAttackInterval).RemovePrefix("m_"),
@@ -86,6 +85,10 @@ namespace MonsterAITweaks {
             monsterAI.m_minAttackInterval = attackInterval.Value;
             attackInterval.SettingChanged += UpdateAttackInterval;
 
+            // check if I should create config for weapons
+            if (monsterAI.m_character is not Humanoid humanoid) {
+                return;
+            }
 
             var weaponIntervalMultiplier = ConfigManager.BindConfig(
                 monster.name,
@@ -97,10 +100,11 @@ namespace MonsterAITweaks {
 
             MonsterConfigMap.Add(weaponIntervalMultiplier, monster);
 
-            var humanoid = monsterAI.m_character as Humanoid;
             foreach (var item in humanoid.m_defaultItems) {
                 if (item.TryGetComponent(out ItemDrop itemDrop)) {
-                    DefaultAiAttackIntervals[itemDrop] = itemDrop.m_itemData.m_shared.m_aiAttackInterval;
+                    if (!DefaultAiAttackIntervals.ContainsKey(itemDrop)) {
+                        DefaultAiAttackIntervals[itemDrop] = itemDrop.m_itemData.m_shared.m_aiAttackInterval;
+                    }
                     itemDrop.m_itemData.m_shared.m_aiAttackInterval = DefaultAiAttackIntervals[itemDrop] * weaponIntervalMultiplier.Value;
                 }
             }
