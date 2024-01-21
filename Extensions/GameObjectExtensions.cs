@@ -1,15 +1,22 @@
-﻿using Jotunn.Extensions;
-using System;
-using System.Reflection;
-using TMPro;
+﻿using System;
 using UnityEngine;
-using UnityEngine.UI;
+
 
 namespace MonsterAITweaks.Extensions {
     /// <summary>
     ///     Extends GameObject with a shortcut for the Unity bool operator override.
     /// </summary>
     public static class GameObjectExtensions {
+
+        /// <summary>
+        ///     Get root prefab name for Valheim game object.
+        /// </summary>
+        /// <param name=""></param>
+        /// <returns></returns>
+        public static string GetPrefabName(this GameObject gameObject) {
+            return Utils.GetPrefabName(gameObject);
+        }
+
         /// <summary>
         ///     Check if GameObject has any of the specified components.
         /// </summary>
