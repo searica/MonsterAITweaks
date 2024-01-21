@@ -5,22 +5,22 @@ using BepInEx.Configuration;
 using HarmonyLib;
 using MonsterAITweaks.Configs;
 using MonsterAITweaks.Extensions;
-using TMPro;
 using UnityEngine;
 
 namespace MonsterAITweaks {
 
     [HarmonyPatch]
     internal static class MonsterDB {
-        private static readonly Dictionary<ConfigEntry<float>, GameObject> MonsterConfigMap = new();
+        private static readonly Dictionary<ConfigEntry<float>, GameObject> ConfigToMonsterMap = new();
+        private static readonly Dictionary<string, ConfigEntry<float>> MonsterToConfigMap = new();
         private static readonly HashSet<string> IgnoredMonsters = new() { "TheHive" };
-        private static readonly Dictionary<ItemDrop, float> DefaultAiAttackIntervals = new();
+        private static readonly Dictionary<ItemDrop.ItemData, float> DefaultAiAttackIntervals = new();
 
         [HarmonyPostfix]
         [HarmonyPatch(typeof(ZoneSystem), nameof(ZoneSystem.Start))]
         private static void InitializeDB() {
 
-            if (MonsterConfigMap.Count > 0) {
+            if (ConfigToMonsterMap.Count > 0) {
                 return;
             }
 
@@ -52,7 +52,7 @@ namespace MonsterAITweaks {
                 "Distance that monster circles target at.",
                 new AcceptableValueRange<float>(0f, 1000f)
             );
-            MonsterConfigMap.Add(circleDist, monster);
+            ConfigToMonsterMap.Add(circleDist, monster);
             monsterAI.m_circleTargetDistance = circleDist.Value;
             circleDist.SettingChanged += UpdateCircleDistance;
 
@@ -63,7 +63,7 @@ namespace MonsterAITweaks {
                 "Duration that monster circles target for..",
                 new AcceptableValueRange<float>(0f, 1000f)
             );
-            MonsterConfigMap.Add(circleDuration, monster);
+            ConfigToMonsterMap.Add(circleDuration, monster);
             monsterAI.m_circleTargetDuration = circleDuration.Value;
             circleDuration.SettingChanged += UpdateCircleDuration;
 
@@ -74,7 +74,7 @@ namespace MonsterAITweaks {
                 "Maximum time before monster pauses attacking and circles target again, will not pause if set to 0.",
                 new AcceptableValueRange<float>(0f, 1000f)
             );
-            MonsterConfigMap.Add(circleInterval, monster);
+            ConfigToMonsterMap.Add(circleInterval, monster);
             monsterAI.m_circleTargetInterval = circleInterval.Value;
             circleInterval.SettingChanged += UpdateCircleInterval;
 
@@ -85,7 +85,7 @@ namespace MonsterAITweaks {
                 "Minimum time before monster can attack again.",
                 new AcceptableValueRange<float>(0f, 1000f)
             );
-            MonsterConfigMap.Add(attackInterval, monster);
+            ConfigToMonsterMap.Add(attackInterval, monster);
             monsterAI.m_minAttackInterval = attackInterval.Value;
             attackInterval.SettingChanged += UpdateAttackInterval;
 
@@ -102,35 +102,34 @@ namespace MonsterAITweaks {
                 new AcceptableValueRange<float>(0f, 2f)
             );
 
-            MonsterConfigMap.Add(weaponIntervalMultiplier, monster);
-
-            foreach (var item in humanoid.m_defaultItems) {
-                if (item.TryGetComponent(out ItemDrop itemDrop)) {
-                    if (!DefaultAiAttackIntervals.ContainsKey(itemDrop)) {
-                        DefaultAiAttackIntervals[itemDrop] = itemDrop.m_itemData.m_shared.m_aiAttackInterval;
-                    }
-                    itemDrop.m_itemData.m_shared.m_aiAttackInterval = DefaultAiAttackIntervals[itemDrop] * weaponIntervalMultiplier.Value;
-                }
-            }
-
-            weaponIntervalMultiplier.SettingChanged += UpdateWpnAiAttackInterval;
+            ConfigToMonsterMap.Add(weaponIntervalMultiplier, monster);
+            MonsterToConfigMap.Add(monster.name, weaponIntervalMultiplier);
         }
 
-        //private static bool IsWeapon(ItemDrop item) {
-        //    var itemType = item.m_itemData.m_shared.m_itemType;
-        //    switch (itemType) {
-        //        case ItemDrop.ItemData.ItemType.OneHandedWeapon: return true;
-        //        case ItemDrop.ItemData.ItemType.TwoHandedWeapon: return true;
-        //        case ItemDrop.ItemData.ItemType.Bow: return true;
-        //        case ItemDrop.ItemData.ItemType.Torch: return true;
-        //        case ItemDrop.ItemData.ItemType.Torch: return true;
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(MonsterAI), nameof(MonsterAI.Start))]
+        private static void EditWeaponsOnStart(MonsterAI __instance) {
+            if (!__instance) {
+                return;
+            }
 
-        //    }
-        //}
+            var monsterName = __instance.GetPrefabName();
+            if (!MonsterToConfigMap.TryGetValue(monsterName, out ConfigEntry<float> multiplier)) {
+                return;
+            }
+
+            if (__instance.m_character is Humanoid humanoid) {
+                foreach (var item in humanoid.GetInventory().GetAllItems()) {
+                    if (item.IsWeapon()) {
+                        item.m_shared.m_aiAttackInterval *= multiplier.Value;
+                    }
+                }
+            }
+        }
 
         private static bool TryGetMonsterConfig(object obj, out ConfigEntry<float> config, out GameObject monster) {
             if (obj is ConfigEntry<float> cfg &&
-                MonsterConfigMap.TryGetValue(cfg, out monster) &&
+                ConfigToMonsterMap.TryGetValue(cfg, out monster) &&
                 monster) {
                 config = cfg;
                 return true;
@@ -168,23 +167,24 @@ namespace MonsterAITweaks {
             }
         }
 
-        private static void UpdateWpnAiAttackInterval(object obj, EventArgs args) {
-            if (TryGetMonsterConfig(obj, out ConfigEntry<float> config, out GameObject monster)) {
-                var monsterAI = monster.GetComponent<MonsterAI>();
+        //private static void UpdateWpnAiAttackInterval(object obj, EventArgs args) {
+        //    if (TryGetMonsterConfig(obj, out ConfigEntry<float> config, out GameObject monster)) {
+        //        var monsterAI = monster.GetComponent<MonsterAI>();
 
-                var humanoid = monsterAI.m_character as Humanoid;
-                foreach (var item in humanoid.m_defaultItems) {
-                    if (item.TryGetComponent(out ItemDrop itemDrop)) {
-                        itemDrop.m_itemData.m_shared.m_aiAttackInterval = DefaultAiAttackIntervals[itemDrop] * config.Value;
-                    }
-                }
-            }
-        }
+        //        var humanoid = monsterAI.m_character as Humanoid;
+        //        foreach (var item in humanoid.m_defaultItems) {
+        //            if (item.TryGetComponent(out ItemDrop itemDrop)) {
+        //                itemDrop.m_itemData.m_shared.m_aiAttackInterval = DefaultAiAttackIntervals[itemDrop] * config.Value;
+        //                Log.LogInfo(itemDrop.m_itemData.m_shared.m_aiAttackInterval);
+        //            }
+        //        }
+        //    }
+        //}
 
         private static List<GameObject> FindMonsters() {
             var gameObjects = Resources.FindObjectsOfTypeAll<GameObject>(); // get all GameObjects
             var prefabs = gameObjects.Where(x => !x.transform.parent); // get objects without a parent (ie they are root prefabs)
-            // Get prefabs that have monsterAI component and are not ignored
+                                                                       // Get prefabs that have monsterAI component and are not ignored
             var monsters = prefabs.Where(x => x.GetComponent<MonsterAI>());
             return monsters.Where(x => !IgnoredMonsters.Contains(x.name)).ToList();
         }
