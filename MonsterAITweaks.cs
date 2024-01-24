@@ -9,15 +9,17 @@ using MonsterAITweaks.Extensions;
 using System.Reflection;
 using UnityEngine;
 
-namespace MonsterAITweaks {
+namespace MonsterAITweaks
+{
 
     [BepInPlugin(PluginGUID, PluginName, PluginVersion)]
     [BepInDependency(Jotunn.Main.ModGuid, Jotunn.Main.Version)]
-    internal sealed class MonsterAITweaks : BaseUnityPlugin {
+    internal sealed class MonsterAITweaks : BaseUnityPlugin
+    {
         internal const string Author = "Searica";
         public const string PluginName = "MonsterAITweaks";
         public const string PluginGUID = $"{Author}.Valheim.{PluginName}";
-        public const string PluginVersion = "0.0.1";
+        public const string PluginVersion = "0.0.2";
 
         // Use this class to add your own localization to the game
         // https://valheim-modding.github.io/Jotunn/tutorials/localization.html
@@ -26,7 +28,8 @@ namespace MonsterAITweaks {
         private static readonly string MainSection = ConfigManager.SetStringPriority("Global", 3);
 
 
-        public void Awake() {
+        public void Awake()
+        {
             Log.Init(Logger);
 
             ConfigManager.Init(PluginGUID, Config);
@@ -40,11 +43,13 @@ namespace MonsterAITweaks {
 
         }
 
-        public void OnDestroy() {
+        public void OnDestroy()
+        {
             ConfigManager.Save();
         }
 
-        internal static void SetUpConfigEntries() {
+        internal static void SetUpConfigEntries()
+        {
             Log.Verbosity = ConfigManager.BindConfig(
                 MainSection,
                 "Verbosity",
@@ -71,7 +76,8 @@ namespace MonsterAITweaks {
     /// <summary>
     ///     Log level to control output to BepInEx log
     /// </summary>
-    internal enum LogLevel {
+    internal enum LogLevel
+    {
         Low = 0,
         Medium = 1,
         High = 2,
@@ -80,7 +86,8 @@ namespace MonsterAITweaks {
     /// <summary>
     ///     Helper class for properly logging from static contexts.
     /// </summary>
-    internal static class Log {
+    internal static class Log
+    {
 
         internal static ConfigEntry<LogLevel> Verbosity { get; set; }
         internal static LogLevel VerbosityLevel => Verbosity.Value;
@@ -90,7 +97,8 @@ namespace MonsterAITweaks {
 
         internal static ManualLogSource _logSource;
 
-        internal static void Init(ManualLogSource logSource) {
+        internal static void Init(ManualLogSource logSource)
+        {
             _logSource = logSource;
         }
 
@@ -104,48 +112,61 @@ namespace MonsterAITweaks {
 
         internal static void LogWarning(object data) => _logSource.LogWarning(data);
 
-        internal static void LogInfo(object data, LogLevel level = LogLevel.Low) {
-            if (Verbosity is null || VerbosityLevel >= level) {
+        internal static void LogInfo(object data, LogLevel level = LogLevel.Low)
+        {
+            if (Verbosity is null || VerbosityLevel >= level)
+            {
                 _logSource.LogInfo(data);
             }
         }
 
-        internal static void LogGameObject(GameObject prefab, bool includeChildren = false) {
+        internal static void LogGameObject(GameObject prefab, bool includeChildren = false)
+        {
             LogInfo("***** " + prefab.name + " *****");
-            foreach (Component compo in prefab.GetComponents<Component>()) {
+            foreach (Component compo in prefab.GetComponents<Component>())
+            {
                 LogComponent(compo);
             }
 
             if (!includeChildren) { return; }
 
             LogInfo("***** " + prefab.name + " (children) *****");
-            foreach (Transform child in prefab.transform) {
+            foreach (Transform child in prefab.transform)
+            {
                 LogInfo($" - {child.gameObject.name}");
-                foreach (Component compo in child.gameObject.GetComponents<Component>()) {
+                foreach (Component compo in child.gameObject.GetComponents<Component>())
+                {
                     LogComponent(compo);
                 }
             }
         }
 
-        internal static void LogComponent(Component compo) {
+        internal static void LogComponent(Component compo)
+        {
             LogInfo($"--- {compo.GetType().Name}: {compo.name} ---");
 
             PropertyInfo[] properties = compo.GetType().GetProperties(ReflectionUtils.AllBindings);
-            foreach (var property in properties) {
-                try {
+            foreach (var property in properties)
+            {
+                try
+                {
                     LogInfo($" - {property.Name} = {property.GetValue(compo)}");
                 }
-                catch {
+                catch
+                {
                     LogWarning($"Failed to get value for {property.Name}");
                 }
             }
 
             FieldInfo[] fields = compo.GetType().GetFields(ReflectionUtils.AllBindings);
-            foreach (var field in fields) {
-                try {
+            foreach (var field in fields)
+            {
+                try
+                {
                     LogInfo($" - {field.Name} = {field.GetValue(compo)}");
                 }
-                catch {
+                catch
+                {
                     LogWarning($"Failed to get value for {field.Name}");
                 }
             }
