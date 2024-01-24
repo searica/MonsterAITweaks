@@ -18,6 +18,7 @@ namespace MonsterAITweaks
         public float circleTargetDistance;
         public float circleTargetInterval;
         public float minAttackInterval;
+        public float randomMoveRange;
 
         public MonsterDB(GameObject monster)
         {
@@ -42,6 +43,7 @@ namespace MonsterAITweaks
             this.circleTargetDuration = monsterAI.m_circleTargetDuration;
             this.circleTargetInterval = monsterAI.m_circleTargetInterval;
             this.minAttackInterval = monsterAI.m_minAttackInterval;
+            this.randomMoveRange = monsterAI.m_randomMoveRange;
         }
 
         public bool IsValid()
@@ -192,6 +194,7 @@ namespace MonsterAITweaks
             {
                 monsterDB.monsterAI.m_circleTargetDistance = monsterDB.circleTargetDistance * config.Value;
                 monsterDB.monsterAI.m_circleTargetDuration = monsterDB.circleTargetDuration * config.Value;
+                monsterDB.monsterAI.m_randomMoveRange = monsterDB.randomMoveRange * config.Value;
             }
         }
 
