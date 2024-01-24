@@ -120,7 +120,7 @@ namespace MonsterAITweaks {
 
             if (__instance.m_character is Humanoid humanoid) {
                 foreach (var item in humanoid.GetInventory().GetAllItems()) {
-                    if (item.IsWeapon()) {
+                    if (item.IsWeapon() && item.IsEquipable()) {
                         item.m_shared.m_aiAttackInterval *= multiplier.Value;
                     }
                 }
