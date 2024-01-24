@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using BepInEx.Configuration;
 using HarmonyLib;
 using MonsterAITweaks.Configs;
@@ -14,29 +13,49 @@ namespace MonsterAITweaks
     internal sealed class MonsterDB
     {
         public MonsterAI monsterAI;
+        public Character character;
         public float circleTargetDuration;
         public float circleTargetDistance;
         public float circleTargetInterval;
         public float minAttackInterval;
 
-        public MonsterDB(MonsterAI monsterAI)
+        public MonsterDB(GameObject monster)
         {
+            if (!monster)
+            {
+                return;
+            }
+
+            if (!monster.TryGetComponent(out MonsterAI monsterAI))
+            {
+                return;
+            }
+
+            if (!monster.TryGetComponent(out Character character))
+            {
+                return;
+            }
+
             this.monsterAI = monsterAI;
+            this.character = character;
             this.circleTargetDistance = monsterAI.m_circleTargetDistance;
             this.circleTargetDuration = monsterAI.m_circleTargetDuration;
             this.circleTargetInterval = monsterAI.m_circleTargetInterval;
             this.minAttackInterval = monsterAI.m_minAttackInterval;
+        }
 
+        public bool IsValid()
+        {
+            return this.monsterAI && this.character;
         }
     }
 
     [HarmonyPatch]
     internal static class MonsterManager
     {
-        private static readonly Dictionary<ConfigEntry<float>, MonsterDB> ConfigToMonsterDBMap = new();
+        private static readonly Dictionary<ConfigEntryBase, MonsterDB> ConfigToMonsterDBMap = new();
         private static readonly Dictionary<string, ConfigEntry<float>> MonsterToConfigMap = new();
         private static readonly HashSet<string> IgnoredMonsters = new() { "TheHive" };
-        private static readonly Dictionary<ItemDrop.ItemData, float> DefaultAiAttackIntervals = new();
 
         [HarmonyPostfix]
         [HarmonyPatch(typeof(ZoneSystem), nameof(ZoneSystem.Start))]
@@ -67,23 +86,12 @@ namespace MonsterAITweaks
         /// <param name="monster"></param>
         private static void CreateConfigs(GameObject monster)
         {
-            if (!monster || !monster.TryGetComponent(out MonsterAI monsterAI))
+            var monsterDB = new MonsterDB(monster);
+
+            if (!monsterDB.IsValid())
             {
                 return;
             }
-
-            var monsterDB = new MonsterDB(monsterAI);
-
-            var evasion = ConfigManager.BindConfig(
-                monster.name,
-                "Evasion",
-                1f,
-                "Multiplier for how evasive the creature is when not attacking.",
-                new AcceptableValueRange<float>(0f, 10f)
-            );
-            ConfigToMonsterDBMap.Add(evasion, monsterDB);
-            UpdateEvasion(evasion, null); // apply the multiplier
-            evasion.SettingChanged += UpdateEvasion;
 
             var aggression = ConfigManager.BindConfig(
                 monster.name,
@@ -96,6 +104,28 @@ namespace MonsterAITweaks
             MonsterToConfigMap.Add(monster.name, aggression);
             UpdateAggression(aggression, null); // apply the multiplier
             aggression.SettingChanged += UpdateAggression;
+
+
+            var evasion = ConfigManager.BindConfig(
+                monster.name,
+                "Evasion",
+                1f,
+                "Multiplier for how evasive the creature is when not attacking.",
+                new AcceptableValueRange<float>(0f, 10f)
+            );
+            ConfigToMonsterDBMap.Add(evasion, monsterDB);
+            UpdateEvasion(evasion, null); // apply the multiplier
+            evasion.SettingChanged += UpdateEvasion;
+
+            var faction = ConfigManager.BindConfig(
+                monster.name,
+                "Faction",
+                monsterDB.character.GetFaction(),
+                "Multiplier for how evasive the creature is when not attacking."
+            );
+            ConfigToMonsterDBMap.Add(faction, monsterDB);
+            UpdateFaction(faction, null); // apply the change
+            faction.SettingChanged += UpdateFaction;
         }
 
         /// <summary>
@@ -137,9 +167,9 @@ namespace MonsterAITweaks
         /// <param name="config"></param>
         /// <param name="monsterDB"></param>
         /// <returns></returns>
-        private static bool TryGetMonsterDB(object obj, out ConfigEntry<float> config, out MonsterDB monsterDB)
+        private static bool TryGetMonsterDB<T>(object obj, out ConfigEntry<T> config, out MonsterDB monsterDB)
         {
-            if (obj is ConfigEntry<float> cfg &&
+            if (obj is ConfigEntry<T> cfg &&
                 ConfigToMonsterDBMap.TryGetValue(cfg, out monsterDB) &&
                 monsterDB.monsterAI)
             {
@@ -176,6 +206,19 @@ namespace MonsterAITweaks
             {
                 monsterDB.monsterAI.m_minAttackInterval = monsterDB.minAttackInterval * (1 / config.Value);
                 monsterDB.monsterAI.m_circleTargetInterval = monsterDB.circleTargetInterval * (1 / config.Value);
+            }
+        }
+
+        /// <summary>
+        ///     Apply aggression multiplier to MonsterAI on monster prefab when setting is changed.
+        /// </summary>
+        /// <param name="obj"></param>
+        /// <param name="args"></param>
+        private static void UpdateFaction(object obj, EventArgs args)
+        {
+            if (TryGetMonsterDB(obj, out ConfigEntry<Character.Faction> config, out MonsterDB monsterDB))
+            {
+                monsterDB.character.m_faction = config.Value;
             }
         }
 
