@@ -126,7 +126,7 @@ namespace MonsterAITweaks
                 "Multiplier for how evasive the creature is when not attacking."
             );
             ConfigToMonsterDBMap.Add(faction, monsterDB);
-            UpdateFaction(faction, null); // apply the change
+            UpdateFaction(faction); // apply the change
             faction.SettingChanged += UpdateFaction;
         }
 
@@ -217,7 +217,7 @@ namespace MonsterAITweaks
         /// </summary>
         /// <param name="obj"></param>
         /// <param name="args"></param>
-        private static void UpdateFaction(object obj, EventArgs args)
+        private static void UpdateFaction(object obj, EventArgs args = null)
         {
             if (TryGetMonsterDB(obj, out ConfigEntry<Character.Faction> config, out MonsterDB monsterDB))
             {
